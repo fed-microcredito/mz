@@ -10,9 +10,9 @@
     .input {
       display: block;
       width: 100%;
-      padding: 0.5rem;
-      margin-bottom: 0.5rem;
-      border: 1px solid #ccc;
+      padding: 0.15rem;
+      margin-bottom: 0.1rem;
+      border: 2px solid blue;
       border-radius: 0.375rem;
     }
 
@@ -74,6 +74,16 @@
       border-radius: 4px;
       cursor: pointer;
     }
+    #contratoGerado {
+      display: none;
+      background-color: white;
+      padding: 2rem;       /* Ajuste de espaçamento interno */
+      margin-top: 1rem;    /* Espaço externo superior */
+      margin-bottom: 1rem; /* Espaço externo inferior */
+      border-radius: 0.5rem; /* Bordas arredondadas */
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      line-height: 1.3;    /* Espaçamento entre linhas */
+    }
 
   </style>
 </head>
@@ -91,11 +101,18 @@
     <input type="text" placeholder="Número do BI" id="numeroBi" class="input" />
     <input type="text" placeholder="Local de Emissão do BI" id="localBi" class="input" />
     <input type="text" placeholder="Local de Residência" id="residencia" class="input" />
+    <input type="text" placeholder="Rua (opcional)" id="rua" class="input" />
     <input type="text" placeholder="Bairro" id="bairro" class="input" />
 
     <h2 class="text-xl font-semibold mt-6 mb-2">Informações do Empréstimo</h2>
     <input type="text" placeholder="Quantia em algarismos" id="quantia" class="input" />
     <input type="text" placeholder="Quantia por extenso" id="quantiaExtenso" class="input" />
+    <select id="numeroMes" class="input">
+      <option value="">Em quantos meses vai liquidar?</option>
+      <option value="1">Em 1 mes</option>
+      <option value="2">Em 2 meses</option>
+      <option value="3">Em 3 meses</option>
+    </select>
     <input type="text" placeholder="Cheque (opcional)" id="cheque" class="input" />
     <input type="text" placeholder="Banco (opcional)" id="banco" class="input" />
     <select id="prazo" class="input">
@@ -119,7 +136,7 @@
     <input type="text" placeholder="Contacto" id="testContacto" class="input" />
 
     <h2 class="text-xl font-semibold mt-6 mb-2">Indique Tribunal Judicial para dirimir eventuais litígios decorrentes do ora contratado</h2>
-    <input type="text" placeholder="Tribunal Judicial de" id="tribunal" class="input" />
+    <input type="text" placeholder="Ex.: Chimoio" id="tribunal" class="input" />
 
     <div class="flex justify-center space-x-4">
       <button type="button" id="btnOk" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Salvar os dados</button>
@@ -127,8 +144,8 @@
     </div>
   </form>
 
-  <button type="button" id="btnPdf" style="display:none; margin-top:1rem;" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
-    Baixar em PDF o termo de contrato
+  <button type="button" id="btnPdf" style="display:none; margin-top:1rem;" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+    Salve o PDF
   </button>
 
   <hr class="my-8" />
@@ -138,7 +155,7 @@
   <!-- Modal para inserir mês salário -->
   <div id="modalMesSalario">
     <div>
-      <h2>Informe o mês do proximo salário</h2>
+      <h2>Informe o mês do salário de liquidação (segundo o nº de meses escolhido)</h2>
       <input type="text" id="inputMesModal" placeholder="Ex: Junho" />
       <button id="btnConfirmarMes">Ok</button>
     </div>
@@ -194,8 +211,10 @@
         numeroBi: getValue("numeroBi"),
         localBi: getValue("localBi"),
         residencia: getValue("residencia"),
+        rua: getValue("rua"),
         bairro: getValue("bairro"),
         quantia: getValue("quantia"),
+        numeroMes: getValue("numeroMes"),
         quantiaExtenso: getValue("quantiaExtenso"),
         cheque: getValue("cheque"),
         banco: getValue("banco"),
@@ -246,62 +265,51 @@
 
     async function gerarContrato() {
       if (!currentUser) return;
-
       const docRef = doc(db, "users", currentUser.uid);
       const docSnap = await getDoc(docRef);
-
       if (!docSnap.exists()) {
         alert("Nenhum dado encontrado. Por favor, clique em OK para salvar os dados antes de gerar o contrato.");
         return;
       }
-
       const d = docSnap.data();
-
+      const meses = parseInt(d.numeroMes) || 1;
       const prazoTexto = d.prazo === "30 dias"
         ? "30 dias"
-        : `até o salário do mês de ${bold(d.mesSalario)}`;
-
-      const juros = (parseFloat(d.quantia) * 1.3).toFixed(2);
-
+        : d.prazo === "salario"
+          ? `até o salário do mês de ${bold(d.mesSalario)}`
+          : (meses !== "não definido" ? `${meses} meses` : "prazo não definido");
+      const base = parseFloat(d.quantia) || 0;
+      const juroMensal = 0.3;
+      const juros = ((juroMensal * meses * base + base) / meses).toFixed(2);
       const contratoHTML = `
 <div class="text-center text-xl font-bold mb-6">CONTRATO DE EMPRÉSTIMO DE DINHEIRO</div>
-
-<p> Por este instrumento particular, de um lado a empresa <strong>FED-Microcrédito</strong>, E.I. com a sede no bairro Centro Hípico Cidade de Chimoio, Quarteirão n 06, Representado pelo Senhor <strong>Felix Filipe Diquissone</strong>, NUIT, <strong>149707441</strong>, CCl: <strong>864533157</strong>, de nacionalidade Moçambicana, nascido ao 12 de Junho de 1997, residente no bairro Nhamatsane, distrito de Chimoio, natural de Barué, Província de Manica, filho de Filipe Diquissone e de Maria Do Céu Mantrujar, portador do BI n°060205798036 M passado pelo Arquivo de Identificação Civil de Chimoio. De ora em diante denominado simplesmente Credor e de outro lado, ${bold(d.nome)}, nacionalidade ${bold(d.nacionalidade)}, profissão ${bold(d.profissao)}, estado civil ${bold(d.estadoCivil)}, portador do B.I nº ${bold(d.numeroBi)}, emitido pelo Arquivo de Identificação Civil de ${bold(d.localBi)}, residente em ${bold(d.residencia)}, Bairro ${bold(d.bairro)}. De ora em diante denominado simplesmente Devedor, têm entre si como justo e contratado o que segue:</p>
-
+<p>Por este instrumento particular, de um lado a empresa <strong>FED-Microcrédito E.I.</strong>, com a sede no bairro Centro Hípico Cidade de Chimoio, Quarteirão n 06, Representado pelo Senhor <strong>Felix Filipe Diquissone</strong>, NUIT, <strong>149707441</strong>, celular: <strong>864533157</strong>, de nacionalidade Moçambicana, nascido ao 12 de Junho de 1997, residente no bairro Nhamatsane, distrito de Chimoio, natural de Barué, Província de Manica, filho de Filipe Diquissone e de Maria Do Céu Mantrujar, portador do BI n°060205798036 M passado pelo Arquivo de Identificação Civil de Chimoio. De ora em diante denominado simplesmente Credor e de outro lado, ${bold(d.nome)}, nacionalidade ${bold(d.nacionalidade)}, profissão ${bold(d.profissao)}, estado civil ${bold(d.estadoCivil)}, portador do B.I nº ${bold(d.numeroBi)}, emitido pelo Arquivo de Identificação Civil de ${bold(d.localBi)}, residente em ${bold(d.residencia)}, ${d.rua ? `na rua nº <strong>${d.rua}</strong>`:""}${d.bairro?`, bairro <strong>${d.bairro}</strong>`:""}. De ora em diante denominado simplesmente Devedor, têm entre si como justo e contratado o que segue:</p>
 <p><strong>CLÁUSULA PRIMEIRA</strong><br>
 O Credor entrega ao Devedor a quantia de ${bold(d.quantia)}.<strong>00</strong> (${bold(d.quantiaExtenso)}) em dinheiro${d.cheque ? `, representada pelo cheque nº ${bold(d.cheque)}, contra o Banco ${bold(d.banco)}` : ""}, pelo prazo de ${prazoTexto}, que deverá ser paga da seguinte forma: Mensal</p>
-
 <p><strong>CLÁUSULA SEGUNDA</strong><br>
-À quantia acima serão aplicados juros de 30% (trinta por cento) ao Mês e correcção monetária determinada pelo índice valor emprestado que é de ${bold(juros)} por mês.</p>
-
+À quantia acima serão aplicados juros de 30% (trinta por cento) ao mês e correcção monetária determinada pelo índice valor emprestado que é de ${bold(juros)} por mês, num periodo de ${bold(meses)} meses.</p>
 <p><strong>CLÁUSULA TERCEIRA</strong><br>
-Os jurus de demora por parte de devedor serão acrescidos em 1 por cento do valor da base por dia, no caso de não cumprimento dentro do prazo estabelecido na cláusula anterior.</p>
-
+Os juros de demora por parte de devedor serão acrescidos em 1 por cento do valor da base por dia, no caso de não cumprimento dentro do prazo estabelecido na cláusula anterior.</p>
 <p><strong>CLÁUSULA QUARTA</strong><br>
 O Devedor poderá amortizar ou liquidar a dívida ora contraída, antes do vencimento, com abatimento proporcional dos juros acima citados.</p>
-
 <p><strong>CLÁUSULA QUINTA</strong><br>
 Todo e qualquer atraso no (s) pagamento (s) devido (s) acarretarão acréscimo de juros e correcção monetária, cobrados da data de vencimento até a data da efectiva satisfação do crédito. </p>
-
 <p><strong>CLÁUSULA SEXTA</strong><br>
-Assinam também o presente contrato, solidariamente com o Devedor, na qualidade de testemunha ${bold(d.testNome)}, nacionalidade ${bold(d.testNacionalidade)}, profissão ${bold(d.testProfissao)}, estado civil ${bold(d.testEstadoCivil)}, portador do BI nº ${bold(d.testBi)}, emitido pelo Arquivo de Identificação Civil de  ${bold(d.testEmissao)}, aos ${bold(formatarData(d.testData))},, nome e qualificação do cônjuge, ${bold(d.testConjuge)}, residente na rua ${bold(d.testRua)}, Bairro ${bold(d.testBairro)}, contacto ${bold(d.testContacto)}, responsabilizando-se por todas as obrigações ora assumidas.</p>
-
+Assinam também o presente contrato, solidariamente com o Devedor, na qualidade de testemunha ${bold(d.testNome)}, nacionalidade ${bold(d.testNacionalidade)}, profissão ${bold(d.testProfissao)}, estado civil ${bold(d.testEstadoCivil)}, portador do BI nº ${bold(d.testBi)}, emitido pelo Arquivo de Identificação Civil de  ${bold(d.testEmissao)}, aos ${bold(formatarData(d.testData))},, nome e qualificação do cônjuge, ${bold(d.testConjuge)}, residente ${d.testRua ? `na rua nº <strong>${d.testRua}</strong>,` : ""} no bairro ${bold(d.testBairro)}, contacto ${bold(d.testContacto)}, responsabilizando-se por todas as obrigações ora assumidas.</p>
 <p><strong>CLÁUSULA SÉTIMA</strong><br>
 Fica eleito o Tribunal Judicial de  ${bold(d.tribunal)} para dirimir eventuais litígios decorrentes do ora contratado. E assim, por estarem plenamente contratados na forma acima, assinam o presente contrato em duas vias de igual teor.</p>
 
 <div class="text-center mt-10">
-  ___________________, Aos _____/_______________/205__<br><br>
+  ___________________, Aos _____/_______________/_______<br><br>
   ___________________________ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ___________________________<br>
   <strong>Credor</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>Devedor</strong><br><br>
   <strong>Testemunhas:</strong><br>
   1. Nome: __________________________<br>
   2. Nome: __________________________
 </div>`;
-
     const contratoDiv = document.getElementById("contratoGerado");
     const formulario = document.getElementById("contratoForm");
     const titulo = document.getElementById("tituloPrincipal");
-
         formulario.style.display = "none";
         titulo.style.display = "none";
         contratoDiv.style.display = "block";
@@ -309,20 +317,15 @@ Fica eleito o Tribunal Judicial de  ${bold(d.tribunal)} para dirimir eventuais l
         document.getElementById("btnPdf").style.display = "inline-block";
         window.scrollTo(0, 0);
     }
-
-
     document.getElementById("btnOk").addEventListener("click", async () => {
       await salvarDados();
     });
-
     document.getElementById("btnGerar").addEventListener("click", async () => {
       await gerarContrato();
     });
-
     document.getElementById("btnPdf").addEventListener("click", () => {
       window.print();
     });
-
     // Abrir modal se selecionar 'salario'
     document.getElementById("prazo").addEventListener("change", (e) => {
       if (e.target.value === "salario") {
@@ -333,7 +336,6 @@ Fica eleito o Tribunal Judicial de  ${bold(d.tribunal)} para dirimir eventuais l
         document.getElementById("mesSalario").value = "";
       }
     });
-
     // Confirmar mês no modal
     document.getElementById("btnConfirmarMes").addEventListener("click", () => {
       const mes = document.getElementById("inputMesModal").value.trim();
@@ -344,7 +346,6 @@ Fica eleito o Tribunal Judicial de  ${bold(d.tribunal)} para dirimir eventuais l
       document.getElementById("mesSalario").value = mes;
       document.getElementById("modalMesSalario").style.display = "none";
     });
-
   </script>
 
 </body>
