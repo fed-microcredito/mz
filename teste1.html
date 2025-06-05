@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Contrato de Empréstimo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    /* Seu CSS */
+    .input {
+      display: block;
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 0.375rem;
+    }
+
+    /* Cor de fundo da EDM */
+    body {
+      background-color: #FF6A13;
+      color: #1a202c; /* Mantém o texto escuro para contraste */
+      padding: 2rem;   /* Para manter o padding */
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Pode ajustar conforme seu font-sans */
+    }
+
+    @media print {
+      #btnPdf, #tituloPrincipal, #contratoForm {
+        display: none !important;
+      }
+      body {
+        background: white !important;
+        color: black !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      #contratoGerado {
+        margin: 0;
+        box-shadow: none !important;
+        background: white !important;
+      }
+    }
+
+    /* Modal básico para escolher mês do salário */
+    #modalMesSalario {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    #modalMesSalario > div {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 300px;
+      width: 90%;
+      text-align: center;
+    }
+    #modalMesSalario input {
+      width: 100%;
+      padding: 8px;
+      margin: 12px 0;
+      font-size: 16px;
+    }
+    #modalMesSalario button {
+      padding: 8px 16px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+  </style>
+</head>
+<body class="text-gray-900 p-8 font-sans">
+
+  <!-- Título -->
+  <h1 id="tituloPrincipal" class="text-2xl font-bold mb-6">Gerador de Contrato de Empréstimo</h1>
+
+  <!-- Formulário -->
+  <form id="contratoForm" class="space-y-4">
+    <input type="text" placeholder="Nome do Devedor" id="nome" class="input" />
+    <input type="text" placeholder="Nacionalidade" id="nacionalidade" class="input" />
+    <input type="text" placeholder="Profissão" id="profissao" class="input" />
+    <input type="text" placeholder="Estado Civil" id="estadoCivil" class="input" />
+    <input type="text" placeholder="Número do BI" id="numeroBi" class="input" />
+    <input type="text" placeholder="Local de Emissão do BI" id="localBi" class="input" />
+    <input type="text" placeholder="Local de Residência" id="residencia" class="input" />
+    <input type="text" placeholder="Bairro" id="bairro" class="input" />
+
+    <h2 class="text-xl font-semibold mt-6 mb-2">Informações do Empréstimo</h2>
+    <input type="text" placeholder="Quantia em algarismos" id="quantia" class="input" />
+    <input type="text" placeholder="Quantia por extenso" id="quantiaExtenso" class="input" />
+    <input type="text" placeholder="Cheque (opcional)" id="cheque" class="input" />
+    <input type="text" placeholder="Banco (opcional)" id="banco" class="input" />
+    <select id="prazo" class="input">
+        <option value="">Selecione a profissao</option>
+        <option value="30 dias">Comerciante</option>
+        <option value="salario">Funcionario</option>
+    </select>
+    <input type="text" id="mesSalario" class="input" readonly />
+
+    <h2 class="text-xl font-semibold mt-6 mb-2">Testemunha</h2>
+    <input type="text" placeholder="Nome" id="testNome" class="input" />
+    <input type="text" placeholder="Nacionalidade" id="testNacionalidade" class="input" />
+    <input type="text" placeholder="Profissão" id="testProfissao" class="input" />
+    <input type="text" placeholder="Estado Civil" id="testEstadoCivil" class="input" />
+    <input type="text" placeholder="Número do BI" id="testBi" class="input" />
+    <input type="text" placeholder="Local de emissão" id="testEmissao" class="input" />
+    <input type="date" id="testData" class="input" />
+    <input type="text" placeholder="Nome do cônjuge (opcional)" id="testConjuge" class="input" />
+    <input type="text" placeholder="Rua (opcional)" id="testRua" class="input" />
+    <input type="text" placeholder="Bairro" id="testBairro" class="input" />
+    <input type="text" placeholder="Contacto" id="testContacto" class="input" />
+
+    <h2 class="text-xl font-semibold mt-6 mb-2">Indique Tribunal Judicial para dirimir eventuais litígios decorrentes do ora contratado</h2>
+    <input type="text" placeholder="Tribunal Judicial de" id="tribunal" class="input" />
+
+    <div class="flex justify-center space-x-4">
+      <button type="button" id="btnOk" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Salvar os dados</button>
+      <button type="button" id="btnGerar" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Gerar Contrato</button>
+    </div>
+  </form>
+
+  <button type="button" id="btnPdf" style="display:none; margin-top:1rem;" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+    Baixar PDF
+  </button>
+
+  <hr class="my-8" />
+
+  <div id="contratoGerado" style="display: none;" class="whitespace-pre-wrap bg-white p-6 shadow-md rounded-lg text-justify"></div>
+
+  <!-- Modal para inserir mês salário -->
+  <div id="modalMesSalario">
+    <div>
+      <h2>Informe o mês do proximo salário</h2>
+      <input type="text" id="inputMesModal" placeholder="Ex: Junho" />
+      <button id="btnConfirmarMes">Ok</button>
+    </div>
+  </div>
+
+  <!-- JS -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAuWSj7U5dj_zaEK7oNvfd1yPzv2ztZWw4",
+      authDomain: "fed-microcredito.firebaseapp.com",
+      projectId: "fed-microcredito",
+      storageBucket: "fed-microcredito.appspot.com",
+      messagingSenderId: "418494596100",
+      appId: "1:418494596100:web:0349682b10aa599beea151",
+      measurementId: "G-1VK0QZELJ3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null;
+
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        currentUser = user;
+        console.log("Logado como:", user.email);
+      } else {
+        alert("Você precisa estar logado.");
+        window.location.href = "index.html";
+      }
+    });
+
+    function getValue(id) {
+      return document.getElementById(id).value;
+    }
+
+    async function salvarDados() {
+      if (!currentUser) return;
+
+      const docRef = doc(db, "users", currentUser.uid);
+      const docSnap = await getDoc(docRef);
+
+      const data = {
+        nome: getValue("nome"),
+        nacionalidade: getValue("nacionalidade"),
+        profissao: getValue("profissao"),
+        estadoCivil: getValue("estadoCivil"),
+        numeroBi: getValue("numeroBi"),
+        localBi: getValue("localBi"),
+        residencia: getValue("residencia"),
+        bairro: getValue("bairro"),
+        quantia: getValue("quantia"),
+        quantiaExtenso: getValue("quantiaExtenso"),
+        cheque: getValue("cheque"),
+        banco: getValue("banco"),
+        prazo: getValue("prazo"),
+        mesSalario: getValue("mesSalario"),
+        testNome: getValue("testNome"),
+        testNacionalidade: getValue("testNacionalidade"),
+        testProfissao: getValue("testProfissao"),
+        testEstadoCivil: getValue("testEstadoCivil"),
+        testBi: getValue("testBi"),
+        testEmissao: getValue("testEmissao"),
+        testData: getValue("testData"),
+        testConjuge: getValue("testConjuge"),
+        testRua: getValue("testRua"),
+        testBairro: getValue("testBairro"),
+        testContacto: getValue("testContacto"),
+        tribunal: getValue("tribunal")
+      };
+
+      const now = new Date().toISOString();
+
+      if (!docSnap.exists()) {
+        data.dataInsercao = now;
+        if (data.prazo === "30 dias") {
+          const prazoDate = new Date();
+          prazoDate.setDate(prazoDate.getDate() + 30);
+          data.dataPrazo = prazoDate.toISOString();
+        } else {
+          data.dataPrazo = null;
+        }
+      } else {
+        data.dataInsercao = docSnap.data().dataInsercao || now;
+        data.dataPrazo = docSnap.data().dataPrazo || null;
+      }
+
+      await setDoc(docRef, data);
+      alert("Dados salvos com sucesso!");
+    }
+    function formatarData(dataISO) {
+      if (!dataISO) return "";
+      const [ano, mes, dia] = dataISO.split("-");
+      return `${dia}/${mes}/${ano}`;
+    }
+
+    function bold(text) {
+      return `<strong>${text}</strong>`;
+    }
+
+    async function gerarContrato() {
+      if (!currentUser) return;
+
+      const docRef = doc(db, "users", currentUser.uid);
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
+        alert("Nenhum dado encontrado. Por favor, clique em OK para salvar os dados antes de gerar o contrato.");
+        return;
+      }
+
+      const d = docSnap.data();
+
+      const prazoTexto = d.prazo === "30 dias"
+        ? "30 dias"
+        : `até o salário do mês de ${bold(d.mesSalario)}`;
+
+      const juros = (parseFloat(d.quantia) * 1.3).toFixed(2);
+
+      const contratoHTML = `
+<div class="text-center text-xl font-bold mb-6">CONTRATO DE EMPRÉSTIMO DE DINHEIRO</div>
+
+<p> Por este instrumento particular, de um lado a empresa <strong>FED-Microcrédito</strong>, E.I. com a sede no bairro Centro Hípico Cidade de Chimoio, Quarteirão n 06, Representado pelo Senhor <strong>Felix Filipe Diquissone</strong>, NUIT, <strong>149707441</strong>, CCl: <strong>864533157</strong>, de nacionalidade Moçambicana, nascido ao 12 de Junho de 1997, residente no bairro Nhamatsane, distrito de Chimoio, natural de Barué, Província de Manica, filho de Filipe Diquissone e de Maria Do Céu Mantrujar, portador do BI n°060205798036 M passado pelo Arquivo de Identificação Civil de Chimoio. De ora em diante denominado simplesmente Credor e de outro lado, ${bold(d.nome)}, nacionalidade ${bold(d.nacionalidade)}, profissão ${bold(d.profissao)}, estado civil ${bold(d.estadoCivil)}, portador do B.I nº ${bold(d.numeroBi)}, emitido pelo Arquivo de Identificação Civil de ${bold(d.localBi)}, residente em ${bold(d.residencia)}, Bairro ${bold(d.bairro)}. De ora em diante denominado simplesmente Devedor, têm entre si como justo e contratado o que segue:</p>
+
+<p><strong>CLÁUSULA PRIMEIRA</strong><br>
+O Credor entrega ao Devedor a quantia de ${bold(d.quantia)}.<strong>00</strong> (${bold(d.quantiaExtenso)}) em dinheiro${d.cheque ? `, representada pelo cheque nº ${bold(d.cheque)}, contra o Banco ${bold(d.banco)}` : ""}, pelo prazo de ${prazoTexto}, que deverá ser paga da seguinte forma: Mensal</p>
+
+<p><strong>CLÁUSULA SEGUNDA</strong><br>
+À quantia acima serão aplicados juros de 30% (trinta por cento) ao Mês e correcção monetária determinada pelo índice valor emprestado que é de ${bold(juros)} por mês.</p>
+
+<p><strong>CLÁUSULA TERCEIRA</strong><br>
+Os jurus de demora por parte de devedor serão acrescidos em 1 por cento do valor da base por dia, no caso de não cumprimento dentro do prazo estabelecido na cláusula anterior.</p>
+
+<p><strong>CLÁUSULA QUARTA</strong><br>
+O Devedor poderá amortizar ou liquidar a dívida ora contraída, antes do vencimento, com abatimento proporcional dos juros acima citados.</p>
+
+<p><strong>CLÁUSULA QUINTA</strong><br>
+Todo e qualquer atraso no (s) pagamento (s) devido (s) acarretarão acréscimo de juros e correcção monetária, cobrados da data de vencimento até a data da efectiva satisfação do crédito. </p>
+
+<p><strong>CLÁUSULA SEXTA</strong><br>
+Assinam também o presente contrato, solidariamente com o Devedor, na qualidade de testemunha ${bold(d.testNome)}, nacionalidade ${bold(d.testNacionalidade)}, profissão ${bold(d.testProfissao)}, estado civil ${bold(d.testEstadoCivil)}, portador do BI nº ${bold(d.testBi)}, emitido pelo Arquivo de Identificação Civil de  ${bold(d.testEmissao)}, aos ${bold(formatarData(d.testData))},, nome e qualificação do cônjuge, ${bold(d.testConjuge)}, residente na rua ${bold(d.testRua)}, Bairro ${bold(d.testBairro)}, contacto ${bold(d.testContacto)}, responsabilizando-se por todas as obrigações ora assumidas.</p>
+
+<p><strong>CLÁUSULA SÉTIMA</strong><br>
+Fica eleito o Tribunal Judicial de  ${bold(d.tribunal)} para dirimir eventuais litígios decorrentes do ora contratado. E assim, por estarem plenamente contratados na forma acima, assinam o presente contrato em duas vias de igual teor.</p>
+
+<div class="text-center mt-10">
+  ___________________, Aos _____/_______________/205__<br><br>
+  ___________________________ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ___________________________<br>
+  <strong>Credor</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>Devedor</strong><br><br>
+  <strong>Testemunhas:</strong><br>
+  1. Nome: __________________________<br>
+  2. Nome: __________________________
+</div>`;
+
+    const contratoDiv = document.getElementById("contratoGerado");
+    const formulario = document.getElementById("contratoForm");
+    const titulo = document.getElementById("tituloPrincipal");
+
+        formulario.style.display = "none";
+        titulo.style.display = "none";
+        contratoDiv.style.display = "block";
+        contratoDiv.innerHTML = contratoHTML;
+        document.getElementById("btnPdf").style.display = "inline-block";
+        window.scrollTo(0, 0);
+    }
+
+
+    document.getElementById("btnOk").addEventListener("click", async () => {
+      await salvarDados();
+    });
+
+    document.getElementById("btnGerar").addEventListener("click", async () => {
+      await gerarContrato();
+    });
+
+    document.getElementById("btnPdf").addEventListener("click", () => {
+      window.print();
+    });
+
+    // Abrir modal se selecionar 'salario'
+    document.getElementById("prazo").addEventListener("change", (e) => {
+      if (e.target.value === "salario") {
+        document.getElementById("modalMesSalario").style.display = "flex";
+        document.getElementById("inputMesModal").value = "";
+      } else {
+        // Se trocar para outra opção, limpa o input de mês salário e deixa em branco
+        document.getElementById("mesSalario").value = "";
+      }
+    });
+
+    // Confirmar mês no modal
+    document.getElementById("btnConfirmarMes").addEventListener("click", () => {
+      const mes = document.getElementById("inputMesModal").value.trim();
+      if (!mes) {
+        alert("Por favor, informe o mês.");
+        return;
+      }
+      document.getElementById("mesSalario").value = mes;
+      document.getElementById("modalMesSalario").style.display = "none";
+    });
+
+  </script>
+
+</body>
+</html>

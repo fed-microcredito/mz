@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FED Microcrédito</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #FF6A13; /* Cor da EDM */
+    }
+    h1 {
+      font-style: italic;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col text-white">
+
+  <!-- Header -->
+  <header class="bg-[#004B87] shadow-md py-4 px-6 flex justify-end items-center space-x-4">
+    <button id="btn-cadastrar" class="hover:text-yellow-300 font-semibold">Cadastrar</button>
+    <button id="btn-entrar" class="hover:text-yellow-300 font-semibold">Entrar</button>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-grow flex items-center justify-center text-center px-4">
+    <h1 class="text-2xl font-bold">Bem-vindo à FED-Microcrédito. Um serviço de financiamento de microcrédito.</h1>
+  </main>
+
+  <!-- Overlay -->
+  <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 hidden z-40"></div>
+
+  <!-- Modal -->
+  <div id="modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="bg-white text-gray-800 rounded-lg shadow-xl max-w-sm w-full p-6 relative">
+      <button id="closeModal" class="absolute top-2 right-2 text-gray-500 hover:text-red-500 text-xl">&times;</button>
+
+      <!-- Cadastro -->
+      <div id="modal-cadastrar" class="hidden">
+        <h2 class="text-xl font-semibold text-center mb-4">Cadastro</h2>
+        <form id="formCadastro" class="space-y-4">
+          <input type="email" id="emailCadastro" placeholder="Email" required class="w-full px-4 py-2 border rounded-lg focus:ring focus:ring-blue-300" />
+          <input type="password" id="senhaCadastro" placeholder="Senha" required class="w-full px-4 py-2 border rounded-lg focus:ring focus:ring-blue-300" />
+          <button type="submit" class="w-full bg-[#004B87] text-white py-2 rounded-lg hover:bg-blue-800">Cadastrar</button>
+        </form>
+      </div>
+
+      <!-- Login -->
+      <div id="modal-entrar" class="hidden">
+        <h2 class="text-xl font-semibold text-center mb-4">Login</h2>
+        <form id="formEntrar" class="space-y-4">
+          <input type="email" id="emailLogin" placeholder="Email" required class="w-full px-4 py-2 border rounded-lg focus:ring focus:ring-blue-300" />
+          <input type="password" id="senhaLogin" placeholder="Senha" required class="w-full px-4 py-2 border rounded-lg focus:ring focus:ring-blue-300" />
+          <button type="submit" class="w-full bg-[#004B87] text-white py-2 rounded-lg hover:bg-blue-800">Entrar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase & Modal Script -->
+  <script type="module">
+    // Importações Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+    // Configuração Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyAuWSj7U5dj_zaEK7oNvfd1yPzv2ztZWw4",
+      authDomain: "fed-microcredito.firebaseapp.com",
+      projectId: "fed-microcredito",
+      storageBucket: "fed-microcredito.appspot.com",
+      messagingSenderId: "418494596100",
+      appId: "1:418494596100:web:0349682b10aa599beea151",
+      measurementId: "G-1VK0QZELJ3"
+    };
+
+    // Inicializar Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // Modal logic
+    const overlay = document.getElementById("overlay");
+    const modal = document.getElementById("modal");
+    const modalCadastrar = document.getElementById("modal-cadastrar");
+    const modalEntrar = document.getElementById("modal-entrar");
+
+    function openModal(tipo) {
+      modal.classList.remove("hidden");
+      overlay.classList.remove("hidden");
+      modalCadastrar.classList.add("hidden");
+      modalEntrar.classList.add("hidden");
+
+      if (tipo === "cadastrar") {
+        modalCadastrar.classList.remove("hidden");
+      } else if (tipo === "entrar") {
+        modalEntrar.classList.remove("hidden");
+      }
+    }
+
+    function closeModal() {
+      modal.classList.add("hidden");
+      overlay.classList.add("hidden");
+      modalCadastrar.classList.add("hidden");
+      modalEntrar.classList.add("hidden");
+    }
+
+    document.getElementById("btn-cadastrar").addEventListener("click", () => openModal("cadastrar"));
+    document.getElementById("btn-entrar").addEventListener("click", () => openModal("entrar"));
+    document.getElementById("closeModal").addEventListener("click", closeModal);
+    overlay.addEventListener("click", closeModal);
+
+    // Cadastro
+    document.getElementById("formCadastro").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("emailCadastro").value;
+      const senha = document.getElementById("senhaCadastro").value;
+      try {
+        await createUserWithEmailAndPassword(auth, email, senha);
+        alert("Cadastro realizado com sucesso!");
+        closeModal();
+      } catch (error) {
+        alert("A senha deve ter no minimo 6 caracteres");
+      }
+    });
+
+    // Login
+    document.getElementById("formEntrar").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("emailLogin").value;
+      const senha = document.getElementById("senhaLogin").value;
+      try {
+        await signInWithEmailAndPassword(auth, email, senha);
+        window.location.href = "termo.html";
+        closeModal();
+      } catch (error) {
+        alert("Dados de acesso invalidos. Confirme o seu email ou senha!");
+      }
+    });
+  </script>
+</body>
+</html>
