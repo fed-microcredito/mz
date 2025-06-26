@@ -132,7 +132,7 @@
       const senha = document.getElementById("senhaLogin").value;
       try {
         await signInWithEmailAndPassword(auth, email, senha);
-        window.location.href = "termo.html";
+        window.location.href = "home.html";
         closeModal();
       } catch (error) {
         alert("Dados de acesso invalidos. Confirme o seu email ou senha!");

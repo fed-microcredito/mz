@@ -80,7 +80,7 @@
 <body class="text-gray-900 p-8 font-sans">
 
   <!-- Título -->
-  <h1 id="tituloPrincipal" class="text-2xl font-bold mb-6">Gerador de Contrato de Empréstimo</h1>
+  <h1 id="tituloPrincipal" class="text-2xl font-bold mb-6 text-center">Preenche o formulário corretamente para obter o termo de contrato da FED Microcrédito</h1>
 
   <!-- Formulário -->
   <form id="contratoForm" class="space-y-4">
@@ -123,12 +123,12 @@
 
     <div class="flex justify-center space-x-4">
       <button type="button" id="btnOk" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Salvar os dados</button>
-      <button type="button" id="btnGerar" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Gerar Contrato</button>
+      <button type="button" id="btnGerar" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Obter o termo de Contrato</button>
     </div>
   </form>
 
   <button type="button" id="btnPdf" style="display:none; margin-top:1rem;" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
-    Baixar PDF
+    Baixar em PDF o termo de contrato
   </button>
 
   <hr class="my-8" />
@@ -290,7 +290,7 @@ Assinam também o presente contrato, solidariamente com o Devedor, na qualidade 
 Fica eleito o Tribunal Judicial de  ${bold(d.tribunal)} para dirimir eventuais litígios decorrentes do ora contratado. E assim, por estarem plenamente contratados na forma acima, assinam o presente contrato em duas vias de igual teor.</p>
 
 <div class="text-center mt-10">
-  ___________________, Aos _____/_______________/205__<br><br>
+  ___________________, Aos _____/_______________/_____<br><br>
   ___________________________ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ___________________________<br>
   <strong>Credor</strong> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>Devedor</strong><br><br>
   <strong>Testemunhas:</strong><br>

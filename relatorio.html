@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Relatório de Microcrédito - FED</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #FF6A13;
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+      text-align: center;
+      color: white;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      text-align: center;
+      vertical-align: top;
+    }
+    th {
+      background: #004B87;
+      color: white;
+    }
+    tr:nth-child(even) { background: #f9f9f9; }
+    tr:hover { background: #f1f1f1; }
+
+    input[type="number"] {
+      width: 70px;
+      padding: 0.25rem;
+      border: 1px solid #888;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+
+    button {
+      background-color: #004B87;
+      color: white;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+      border-radius: 4px;
+      margin-top: 0.2rem;
+    }
+
+    button:disabled {
+      background: #888;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body class="p-6">
+  <h1>Relatório de Microcrédito - FED</h1>
+  <div class="overflow-x-auto bg-white rounded-lg shadow p-4">
+    <table id="tabela">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Valor Emprestado</th>
+          <th>Data do Empréstimo</th>
+          <th>Duração (meses)</th>
+          <th>Datas de Prestação</th>
+          <th>Valor por Prestação</th>
+          <th>Dias em Atraso</th>
+          <th>Multa 1%/dia</th>
+          <th>Valor Pago</th>
+          <th>Valor Total a Pagar</th>
+          <th>Efetuar Pagamento</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="corpo-tabela"></tbody>
+    </table>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAuWSj7U5dj_zaEK7oNvfd1yPzv2ztZWw4",
+      authDomain: "fed-microcredito.firebaseapp.com",
+      projectId: "fed-microcredito",
+      storageBucket: "fed-microcredito.appspot.com",
+      messagingSenderId: "418494596100",
+      appId: "1:418494596100:web:0349682b10aa599beea151",
+      measurementId: "G-1VK0QZELJ3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    function formatarData(data) {
+      const d = new Date(data);
+      return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+    }
+
+    function gerarDatasPrestacao(dataInsercaoStr, numeroMeses) {
+      const datas = [];
+      let base = new Date(dataInsercaoStr);
+      base.setDate(base.getDate() + 30);
+      for (let i = 0; i < numeroMeses; i++) {
+        const nova = new Date(base);
+        nova.setDate(base.getDate() + i * 30);
+        datas.push(formatarData(nova));
+      }
+      return datas;
+    }
+
+    function calcularDiasAtraso(datasPrestacoes, pagos) {
+      const hoje = new Date();
+      return datasPrestacoes.map((dtStr, i) => {
+        if (pagos[i] === "PAGO") return 0;
+        const [dia, mes, ano] = dtStr.split("/");
+        const dataPrest = new Date(`${ano}-${mes}-${dia}`);
+        const diffMs = hoje - dataPrest;
+        const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        return dias > 0 ? dias : 0;
+      });
+    }
+
+    async function renderLinhaTabela(d, docSnap, docRef, tbody) {
+      const nome = d.nome || "Sem Nome";
+      const quantia = parseFloat(d.quantia) || 0;
+      const dataEmprestimo = formatarData(d.dataInsercao);
+      const numeroMes = parseInt(d.numeroMes) || 1;
+      const datasPrestacoes = gerarDatasPrestacao(d.dataInsercao, numeroMes);
+      const pagos = d.pagos || Array(numeroMes).fill("");
+      const valoresPagos = d.valoresPagos || Array(numeroMes).fill(0);
+      if (!d.valoresPagos) await updateDoc(docRef, { valoresPagos });
+
+      const jurosMensal = 0.3;
+      const valorPorPrestacao = parseFloat(((jurosMensal * numeroMes * quantia + quantia) / numeroMes).toFixed(2));
+      const diasAtraso = calcularDiasAtraso(datasPrestacoes, pagos);
+
+      const multas = diasAtraso.map((dias, i) =>
+        pagos[i] === "PAGO" ? 0 : parseFloat((quantia * 0.01 * dias).toFixed(2))
+      );
+
+      const totaisComMulta = multas.map((multa, i) => {
+        if (pagos[i] === "PAGO") return 0;
+        return parseFloat((valorPorPrestacao + multa - valoresPagos[i]).toFixed(2));
+      });
+
+      let htmlDatas = "", htmlPrest = "", htmlAtrasos = "", htmlMultas = "", htmlPagos = "", htmlInputs = "", htmlBtns = "";
+
+      // Vai exibir o input da próxima prestação somente se a anterior estiver paga
+      // Primeira prestação sempre mostra input, depois só se a anterior for "PAGO"
+      for (let i = 0; i < numeroMes; i++) {
+        const pago = pagos[i] === "PAGO";
+
+        htmlDatas += pago ? "PAGO<br>" : `${datasPrestacoes[i]}<br>`;
+        htmlPrest += pago ? "PAGO<br>" : `${valorPorPrestacao.toFixed(2)}<br>`;
+        htmlAtrasos += pago ? "-<br>" : `${diasAtraso[i]} dias<br>`;
+        htmlMultas += pago ? "-<br>" : `${multas[i].toFixed(2)}<br>`;
+        htmlPagos += `${valoresPagos[i].toFixed(2)}<br>`;
+
+        // Mostrar input e botão só se:
+        // i === 0 (primeira prestação) OU anterior estiver paga
+        if (pago) {
+          htmlInputs += `<br>`;
+          htmlBtns += `<button disabled style="background:green;">OK</button><br>`;
+        } else {
+          const mostrarInput = i === 0 || pagos[i - 1] === "PAGO";
+          if (mostrarInput) {
+            htmlInputs += `<input type="number" id="in-${docSnap.id}-${i}" placeholder="Prest. ${i + 1}" step="0.01" min="0"><br>`;
+            htmlBtns += `<button id="btn-${docSnap.id}-${i}" disabled>OK</button><br>`;
+          } else {
+            htmlInputs += `<br>`;
+            htmlBtns += `<br>`;
+          }
+        }
+      }
+
+      const valorTotalPagar = totaisComMulta.reduce((acc, val) => acc + Number(val), 0).toFixed(2);
+      const valorTotalPago = valoresPagos.reduce((a, b) => a + Number(b), 0).toFixed(2);
+
+      await updateDoc(docRef, {
+        valorTotalPagar: valorTotalPagar,
+        pagado: valorTotalPago
+      });
+
+      const linha = document.createElement("tr");
+      linha.id = `linha-${docSnap.id}`;
+      linha.innerHTML = `
+        <td>${nome}</td>
+        <td>${quantia.toFixed(2)}</td>
+        <td>${dataEmprestimo}</td>
+        <td>${numeroMes}</td>
+        <td>${htmlDatas}</td>
+        <td>${htmlPrest}</td>
+        <td>${htmlAtrasos}</td>
+        <td>${htmlMultas}</td>
+        <td>${htmlPagos}</td>
+        <td><strong>${valorTotalPagar}</strong></td>
+        <td>${htmlInputs}</td>
+        <td>${htmlBtns}</td>
+      `;
+
+      const antiga = document.getElementById(linha.id);
+      if (antiga) tbody.replaceChild(linha, antiga);
+      else tbody.appendChild(linha);
+
+      for (let i = 0; i < numeroMes; i++) {
+        if (pagos[i] === "PAGO") continue;
+
+        // Só ativa input e botão se i === 0 ou o anterior for pago
+        if (i !== 0 && pagos[i - 1] !== "PAGO") continue;
+
+        const input = document.getElementById(`in-${docSnap.id}-${i}`);
+        const button = document.getElementById(`btn-${docSnap.id}-${i}`);
+
+        if (!input || !button) continue;
+
+        input.addEventListener("input", () => {
+          let valorDigitado = parseFloat(input.value);
+          if (isNaN(valorDigitado) || valorDigitado <= 0) {
+            button.disabled = true;
+            return;
+          }
+
+          // Bloqueia valor maior que valorTotalPagar na última prestação
+          const isUltima = i === numeroMes - 1;
+          if (isUltima && valorDigitado > parseFloat(valorTotalPagar)) {
+            input.value = valorTotalPagar;
+            button.disabled = false;
+            return;
+          }
+
+          button.disabled = false;
+        });
+
+        button.addEventListener("click", async () => {
+          let valorDigitado = parseFloat(input.value);
+          if (isNaN(valorDigitado) || valorDigitado <= 0) return;
+
+          async function distribuirPagamento(index, valorRestante) {
+            if (index >= numeroMes || valorRestante <= 0) return;
+            if (pagos[index] === "PAGO") {
+              await distribuirPagamento(index + 1, valorRestante);
+              return;
+            }
+            const valorDevido = totaisComMulta[index];
+            if (valorRestante >= valorDevido) {
+              valoresPagos[index] += valorDevido;
+              pagos[index] = "PAGO";
+              valorRestante -= valorDevido;
+            } else {
+              valoresPagos[index] += valorRestante;
+              valorRestante = 0;
+            }
+            await distribuirPagamento(index + 1, valorRestante);
+          }
+
+          await distribuirPagamento(i, valorDigitado);
+          await updateDoc(docRef, {
+            valoresPagos: valoresPagos,
+            pagos: pagos
+          });
+          const novo = await getDoc(docRef);
+          renderLinhaTabela(novo.data(), docSnap, docRef, tbody);
+        });
+      }
+    }
+
+    onAuthStateChanged(auth, async usuario => {
+      if (!usuario) {
+        alert("Você precisa estar logado para acessar esta página.");
+        window.location.href = "index.html";
+        return;
+      }
+      const snapshot = await getDocs(collection(db, "users"));
+      const tbody = document.getElementById("corpo-tabela");
+      for (const docSnap of snapshot.docs) {
+        await renderLinhaTabela(docSnap.data(), docSnap, doc(db, "users", docSnap.id), tbody);
+      }
+    });
+  </script>
+</body>
+</html>
